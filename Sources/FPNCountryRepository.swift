@@ -20,15 +20,21 @@ open class FPNCountryRepository {
 
 	// Populates the metadata from the included json file resource
 	private func getAllCountries() -> [FPNCountry] {
-		let bundle: Bundle = Bundle.FlagPhoneNumber()
-		let resource: String = "countryCodes"
-		let jsonPath = bundle.path(forResource: resource, ofType: "json")
+		#if SWIFT_PACKAGE
+	    let bundle = Bundle.module
+	    #else
+	    let bundle = Bundle.FlagPhoneNumber()
+	    #endif
 
-		assert(jsonPath != nil, "Resource file is not found in the Bundle")
+		guard let url = bundle.url(forResource: "countryCodes", withExtension: "json") else {
+	        assertionFailure("countryCodes.json not found")
+	        return []
+	    }
 
-		let jsonData = try? Data(contentsOf: URL(fileURLWithPath: jsonPath!))
-
-		assert(jsonPath != nil, "Resource file is not found")
+		guard let jsonData = try? Data(contentsOf: url) else {
+	        assertionFailure("Failed to read countryCodes.json")
+	        return []
+	    }
 
 		var countries = [FPNCountry]()
 
