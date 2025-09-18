@@ -36,10 +36,7 @@ let package = Package(
             path: "Sources",
             exclude: ["Info.plist", "libPhoneNumber"],
             publicHeadersPath: ".",
-            resources: [
-                // This folder must contain `countryCodes.json`
-                .process("Resources")
-            ]
+            resources: [ .process("Resources") ]
         ),
     ]
 )
