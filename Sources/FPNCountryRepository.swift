@@ -20,43 +20,42 @@ open class FPNCountryRepository {
 
 	// Populates the metadata from the included json file resource
 	private func getAllCountries() -> [FPNCountry] {
-		#if SWIFT_PACKAGE
+	    // Use the correct bundle in both worlds
+	    #if SWIFT_PACKAGE
 	    let bundle = Bundle.module
 	    #else
 	    let bundle = Bundle.FlagPhoneNumber()
 	    #endif
-
-		guard let url = bundle.url(forResource: "countryCodes", withExtension: "json") else {
-	        assertionFailure("countryCodes.json not found")
+	
+	    guard let url = bundle.url(forResource: "countryCodes", withExtension: "json"),
+	          let jsonData = try? Data(contentsOf: url) else {
+	        assertionFailure("countryCodes.json not found or unreadable in bundle: \(bundle.bundleURL)")
 	        return []
 	    }
-
-		guard let jsonData = try? Data(contentsOf: url) else {
-	        assertionFailure("Failed to read countryCodes.json")
-	        return []
+	
+	    var countries: [FPNCountry] = []
+	
+	    do {
+	        if let arr = try JSONSerialization.jsonObject(with: jsonData) as? [[String: Any]] {
+	            for obj in arr {
+	                guard let code = obj["code"] as? String,
+	                      let phoneCode = obj["dial_code"] as? String,
+	                      let name = obj["name"] as? String else { continue }
+	                let country = FPNCountry(
+	                    code: code,
+	                    name: locale.localizedString(forRegionCode: code) ?? name,
+	                    phoneCode: phoneCode
+	                )
+	                countries.append(country)
+	            }
+	        }
+	    } catch {
+	        assertionFailure(error.localizedDescription)
 	    }
-
-		var countries = [FPNCountry]()
-
-		do {
-			if let jsonObjects = try JSONSerialization.jsonObject(with: jsonData!, options: JSONSerialization.ReadingOptions.allowFragments) as? NSArray {
-
-				for jsonObject in jsonObjects {
-					guard let countryObj = jsonObject as? NSDictionary else { return countries }
-					guard let code = countryObj["code"] as? String, let phoneCode = countryObj["dial_code"] as? String, let name = countryObj["name"] as? String else { return countries }
-
-
-					let country = FPNCountry(code: code, name: locale.localizedString(forRegionCode: code) ?? name, phoneCode: phoneCode)
-
-					countries.append(country)
-				}
-
-			}
-		} catch let error {
-			assertionFailure(error.localizedDescription)
-		}
-		return countries.sorted(by: { $0.name.localizedCaseInsensitiveCompare($1.name) == ComparisonResult.orderedAscending })
+	
+	    return countries.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
 	}
+
 
 	private func getAllCountries(excluding countryCodes: [FPNCountryCode]) -> [FPNCountry] {
 		var allCountries = getAllCountries()
